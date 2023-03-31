@@ -5,10 +5,12 @@
 #include <string.h>             // necesario para usar la función strlen()
 
 // Define constant values
-#define ROWS 4               // number of rows in keypad
-#define COLS 4               // number of columns in keypad
-#define RELAY_PIN 2          // pin number for relay
-#define LEVEL_SENSOR_PIN 12  // pin number for level sensor
+#define ROWS 4                 // number of rows in keypad
+#define COLS 4                 // number of columns in keypad
+#define RELAY_PIN_GELMA 2      // pin number for relay
+#define RELAY_PIN_FILLTANK A1  // pin number for relay
+#define LEVEL_SENSOR_PIN 12    // pin number for level sensor
+#define LEVEL_SENSOR_PIN0 A3   // pin number for level sensor
 
 // Pump parameters
 int Qmax_pump = 150;  // Max Flow rate of the pump(l/h)
@@ -42,10 +44,11 @@ Keypad keypad = Keypad(makeKeymap(keys), ROW_PINS, COL_PINS, ROWS, COLS);  // ke
 
 // Setup function to be run once at startup
 void setup() {
-  pinMode(LEVEL_SENSOR_PIN, INPUT_PULLUP);  // set pin in high mode
-  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(LEVEL_SENSOR_PIN, INPUT_PULLUP);
+  pinMode(LEVEL_SENSOR_PIN0, INPUT_PULLUP);  // set pin in high mode
+  pinMode(RELAY_PIN_GELMA, OUTPUT);
+  pinMode(RELAY_PIN_FILLTANK, OUTPUT);
 
-  Serial.begin(9600);
   lcd.init();           // initialize LCD
   lcd.backlight();      // turn on backlight
   lcd.clear();          // clear LCD screen
@@ -56,7 +59,7 @@ void setup() {
   // Select Volume to be pumped
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Volume (mL): ");
+  lcd.print("GelMA Vol (mL): ");
 
   while (keyPressed != '#') {
     keyPressed = keypad.getKey();
@@ -273,18 +276,24 @@ void activatePumps() {
   // calculate removed liters
   float pump_time = volume_glass * 60 * 60 / (Qmax_pump);
 
+  // GELMA TANK EMPTYING
   float startTime = 0;    // variable to store the start time
   float elapsedTime = 0;  // variable to store the elapsed time
 
   // turn on the relay to activate the pump and record the start time
-  digitalWrite(RELAY_PIN, HIGH);
+  if (isTriggered == 0) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Emptying...");
+  }
+  digitalWrite(RELAY_PIN_GELMA, HIGH);
   delay(100);
   startTime = millis() + 100;
 
   // run the loop for up to pump_time seconds or until the level sensor is triggered
   while (elapsedTime < pump_time && !isTriggered) {
     // check if the level sensor has been triggered
-    if (digitalRead(LEVEL_SENSOR_PIN) == HIGH) {
+    if (digitalRead(LEVEL_SENSOR_PIN) == HIGH || digitalRead(LEVEL_SENSOR_PIN0) == HIGH) {
       isTriggered = 1;  // set the flag to 1
     }
     delay(100);                          // wait for 100 milliseconds
@@ -292,15 +301,54 @@ void activatePumps() {
   }
 
   // turn off the relay to stop the pump
-  digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(RELAY_PIN_GELMA, LOW);
   delay(100);
 
   if (isTriggered == 0) {
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Done in: ");
-    lcd.setCursor(0, 1);
     lcd.print(elapsedTime / 1000);
+    lcd.print("s");
+
+    delay(5000);  // wait before updating the display again
+  }
+  // GELMA TANK FILLING
+  // calculate removed liters
+
+  float startTime0 = 0;    // variable to store the start time
+  float elapsedTime0 = 0;  // variable to store the elapsed time
+
+  // turn on the relay to activate the pump and record the start time
+  if (isTriggered == 0) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Filling...");
+  }
+
+  digitalWrite(RELAY_PIN_FILLTANK, HIGH);
+  delay(100);
+  startTime0 = millis() + 100;
+
+  // run the loop for up to pump_time seconds or until the level sensor is triggered
+  while (elapsedTime0 < pump_time && !isTriggered) {
+    // check if the level sensor has been triggered
+    if (digitalRead(LEVEL_SENSOR_PIN) == HIGH || digitalRead(LEVEL_SENSOR_PIN0) == HIGH) {
+      isTriggered = 1;  // set the flag to 1
+    }
+    delay(100);                            // wait for 100 milliseconds
+    elapsedTime0 = millis() - startTime0;  // calculate the elapsed time
+  }
+
+  // turn off the relay to stop the pump
+  digitalWrite(RELAY_PIN_FILLTANK, LOW);
+  delay(100);
+
+  if (isTriggered == 0) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Done in: ");
+    lcd.print(elapsedTime0 / 1000);
     lcd.print("s");
 
     delay(5000);  // wait before updating the display again
