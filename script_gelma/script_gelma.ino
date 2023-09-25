@@ -3,6 +3,7 @@
 #include <LiquidCrystal_I2C.h>  // for LCD display
 #include <Keypad.h>             // for keypad input
 #include <string.h>             // necesario para usar la función strlen()
+#include <math.h>
 
 // Define constant values
 #define ROWS 4                 // number of rows in keypad
@@ -16,6 +17,7 @@
 int Qmax_pump = 150;  // Max Flow rate of the pump(l/h)
 unsigned long volume = 0;
 unsigned long volume_glass = 0;
+unsigned long long totalTime = 0;
 int keyPressed = 0;
 int keyP = 0;
 float rem_Vol = 835;  // Remanent Volume needed to ensure that pump is allways filled
@@ -31,10 +33,10 @@ char keys[ROWS][COLS] = {                     // array of characters correspondi
   { 'A', 'B', 'C', 'D' }
 };
 
-int days = 0;          // number of days in timer
-int hours = 0;         // number of hours in timer
-int minutes = 0;       // number of minutes in timer
-int seconds = 0;       // number of seconds in timer
+long days = 0;          // number of days in timer
+long hours = 0;         // number of hours in timer
+long minutes = 0;       // number of minutes in timer
+long seconds = 0;       // number of seconds in timer
 int selectedMenu = 0;  // selected menu option (0-3)
 int cycles = 0;
 
@@ -200,7 +202,7 @@ void resetTimer() {
 void startTimer() {
   // Calculate the total time in seconds
   for (int zz = 0; zz < cycles; zz++) {  // Loop based on number of cycles selected
-    unsigned long totalTime = (days * 86400) + (hours * 3600) + (minutes * 60) + seconds;
+    totalTime = (days * 86400) + (hours * 3600) + (minutes * 60) + seconds;
     if (isTriggered == 0) {
 
       // Loop until the timer reaches zero
@@ -245,12 +247,12 @@ void startTimer() {
 }
 
 // This function formats the remaining time as a string
-String formatTime(unsigned long totalTime) {
+String formatTime(unsigned long long totalTime) {
   // Calculate the number of days, hours, minutes, and seconds left
-  int daysLeft = totalTime / 86400;
-  int hoursLeft = (totalTime % 86400) / 3600;
-  int minutesLeft = (totalTime % 3600) / 60;
-  int secondsLeft = totalTime % 60;
+  long daysLeft = floor(totalTime / 86400);
+  long hoursLeft = floor((totalTime % 86400) / 3600);
+  long minutesLeft = floor((totalTime % 3600) / 60);
+  long secondsLeft = floor (totalTime % 60);
 
   // Create an empty string to store the formatted time
   String formattedTime = "";
@@ -291,7 +293,7 @@ void activatePumps() {
   startTime = millis() + 100;
 
   // run the loop for up to pump_time seconds or until the level sensor is triggered
-  while (elapsedTime < pump_time && !isTriggered) {
+  while (elapsedTime < 92000 && !isTriggered) {
     // check if the level sensor has been triggered
     if (digitalRead(LEVEL_SENSOR_PIN) == HIGH || digitalRead(LEVEL_SENSOR_PIN0) == HIGH) {
       isTriggered = 1;  // set the flag to 1
@@ -331,7 +333,7 @@ void activatePumps() {
   startTime0 = millis() + 100;
 
   // run the loop for up to pump_time seconds or until the level sensor is triggered
-  while (elapsedTime0 < pump_time && !isTriggered) {
+  while (elapsedTime0 < 119000 && !isTriggered) {
     // check if the level sensor has been triggered
     if (digitalRead(LEVEL_SENSOR_PIN) == HIGH || digitalRead(LEVEL_SENSOR_PIN0) == HIGH) {
       isTriggered = 1;  // set the flag to 1
